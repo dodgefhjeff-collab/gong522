@@ -1,4 +1,10 @@
-/* 文件：main.c，48PIN电源模块主程序，PB10/PB11对外ICD通信，PA2/PA3与28PIN内部通信 */
+/*
+**----------------------------------文件信息------------------------------------
+** 文件名称: main.c
+** 创建人员: 胡兴明
+** 修改说明: 48PIN电源模块主程序，PB10/PB11对外ICD通信，PA2/PA3与28PIN内部通信
+**------------------------------------------------------------------------------
+*/
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -18,53 +24,52 @@
 #include "power.h"
 #include "power_eeprom.h"
 
-/* -------------------- 版本号 -------------------- */
-
+/*-------------------- 版本号 --------------------*/
 #define Mversion 1
 #define Sversion 1
-#define uart_debug 0
+#define uart_debug 1
 
-/* -------------------- 任务优先级 -------------------- */
-
+/*-------------------- 任务优先级 --------------------*/
 #define START_TASK_PRIO         1
 #define LED_TASK_PRIO           2
 #define STATUS_REPORT_TASK_PRIO 3
 #define ADC_TASK_PRIO           4
 #define USART_TASK_PRIO         6
 #define TEST_TASK_PRIO          2
-/* -------------------- 任务堆栈大小 -------------------- */
 
+/*-------------------- 任务堆栈大小 --------------------*/
 #define START_STK_SIZE          256
 #define LED_STK_SIZE            128
 #define STATUS_REPORT_STK_SIZE  160
 #define ADC_STK_SIZE            150
 #define USART_STK_SIZE          256
+
 #define TEST_STK_SIZE           350
 
-/* -------------------- 故障/告警说明 -------------------- */
 
-/* -------------------- 全局句柄 -------------------- */
+
+/*-------------------- 全局句柄 --------------------*/
 #if uart_debug
 TaskHandle_t TESTTask_Handler;
 #endif
-
 TaskHandle_t StartTask_Handler;
 TaskHandle_t ADCTask_Handler;
+
 TaskHandle_t UARTTask_Handler;
+
 TaskHandle_t LEDTask_Handler;
 TaskHandle_t StatusReportTask_Handler;
+
 xSemaphoreHandle FillBuffMutex = NULL;
 
 xSemaphoreHandle SemaphoerCapOVPHandle = NULL;
-
 QueueHandle_t Queuehandler_USART = NULL;
 QueueHandle_t Queuehandler_ModOutNum = NULL;
-queue_data Queue_USART;
 
+queue_data Queue_USART;
 int16_t wendu = 0;
 
-/* -------------------- 函数声明 -------------------- */
-
+/*-------------------- 函数声明 --------------------*/
 int fputc(int ch, FILE *f);
 int fgetc(FILE *f);
 void SYS_Init(void);
@@ -77,32 +82,36 @@ void LED_task(void *pvParameters);
 void test_task(void *pvParameters);
 #endif
 
-/* -------------------- 协议处理函数 -------------------- */
-/* Power_CheckFrameLen：电源模块业务处理函数 */
+/*-------------------- 协议处理函数 --------------------*/
+/*******************************************************************************
+** 函数名称: Power_CheckFrameLen
+** 功能描述: 电源模块业务处理函数。
+** 参数说明: 
+********************************************************************************/
 static uint8_t Power_CheckFrameLen(uint8_t *frame, uint16_t frame_len)
 {
-    
     uint16_t len;
 
     if (frame_len < 6)
     {
-        
         return UART_PROTOCOL_ERR_LEN;
     }
 
-    /* 协议中的数据长度 = 帧头6字节 + 消息体 + CRC2字节 */
     len = uart_read_u16_be(&frame[4]);
     if (len != (frame_len + 2))
     {
-        
         return UART_PROTOCOL_ERR_LEN;
     }
 
-    
+
     return UART_PROTOCOL_OK;
 }
 
-/* Power_IsValidDuty：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_IsValidDuty
+** 功能描述: 电源模块业务处理函数。
+** 参数说明:
+********************************************************************************/
 static uint8_t Power_IsValidDuty(uint8_t duty)
 {
     if (duty <= 0xA0 && ((duty & 0x0F) == 0x00))
@@ -112,15 +121,23 @@ static uint8_t Power_IsValidDuty(uint8_t duty)
     return 0;
 }
 
-/* Power_SendProtocolErrorByRaw：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_SendProtocolErrorByRaw
+** 功能描述: 电源模块业务处理函数。
+** 参数说明: 
+********************************************************************************/
 static void Power_SendProtocolErrorByRaw(uint8_t *raw_frame, uint16_t raw_len, uint8_t err_code)
 {
-    
     uint16_t msg_id;
-    
     uint8_t name_len;
-    
+
     uint16_t pack_no;
+
+    /* CRC错误时严格丢弃整帧，不允许触发任何业务回传 */
+    if (err_code == UART_PROTOCOL_ERR_CRC)
+    {
+        return;
+    }
 
     if (raw_frame == 0 || raw_len < 6)
     {
@@ -145,12 +162,14 @@ static void Power_SendProtocolErrorByRaw(uint8_t *raw_frame, uint16_t raw_len, u
     }
 }
 
-/* Power_HandleSelfCheck：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_HandleSelfCheck
+** 功能描述: 电源模块业务处理函数。
+** 参数说明:
+********************************************************************************/
 static void Power_HandleSelfCheck(uint8_t *frame, uint16_t frame_len)
 {
-    
     uint8_t cmd;
-    
     uint8_t type;
 
     if (Power_CheckFrameLen(frame, frame_len) != UART_PROTOCOL_OK)
@@ -177,7 +196,7 @@ static void Power_HandleSelfCheck(uint8_t *frame, uint16_t frame_len)
 
     power_self_check_type = type;
 
-    /* 0x0412唯一正常发送入口：；只有收到外部0x0401自检查询/启动/停止命令，才允许回传0x0412。；上电/周期主动输出已经在StatusReport_task()和Power_StatusReportTick()中屏蔽。 */
+
     if (cmd == 0x01)
     {
         Power_SendStatusReport(type);
@@ -193,14 +212,18 @@ static void Power_HandleSelfCheck(uint8_t *frame, uint16_t frame_len)
     }
 }
 
-/* Power_HandleControl：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_HandleControl
+** 功能描述: 电源模块业务处理函数。
+** 参数说明: 
+********************************************************************************/
 static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 {
-    
+
     uint8_t fan_switch;
-    
+
     uint8_t duty;
-    
+
     uint8_t clear_flag;
 
     if (Power_CheckFrameLen(frame, frame_len) != UART_PROTOCOL_OK || frame_len != 14)
@@ -221,7 +244,7 @@ static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 
     if ((fan_switch != POWER_FAN_OFF && fan_switch != POWER_FAN_ON) ||
         Power_IsValidDuty(duty) == 0 ||
-        (clear_flag > POWER_CLEAR_MAXMIN_AND_HOUR))
+        (clear_flag != 0x00 && clear_flag != 0x01))
     {
         Power_SendAck(POWER_MSG_CONTROL, POWER_NAK, UART_PROTOCOL_ERR_DATA, POWER_SET_FAIL);
         return;
@@ -229,72 +252,24 @@ static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 
     Power_SetFan(fan_switch, duty);
     Power_SendSlaveControl(fan_switch, duty, clear_flag);
-    if ((clear_flag == POWER_CLEAR_MAXMIN) || (clear_flag == POWER_CLEAR_MAXMIN_AND_HOUR))
+    if (clear_flag == 0x01)
     {
         Power_ClearMaxMin();
-    }
-    if ((clear_flag == POWER_CLEAR_WORK_HOUR) || (clear_flag == POWER_CLEAR_MAXMIN_AND_HOUR))
-    {
-        Power_SetWorkHour(0);
-        Power_EepromHandleClear(POWER_EEPROM_CMD_CLEAR_WORK_HOUR);
     }
 
     Power_SendAck(POWER_MSG_CONTROL, POWER_ACK, 0x00, POWER_SET_OK);
 }
 
-/* Power_HandleBoardCfg：0x0404 设置/清零板卡编号、出厂日期、累计工作时长 */
-static void Power_HandleBoardCfg(uint8_t *frame, uint16_t frame_len)
-{
-    uint8_t sub_cmd;
-
-    if (Power_CheckFrameLen(frame, frame_len) != UART_PROTOCOL_OK || frame_len != 14)
-    {
-        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_LEN, POWER_SET_FAIL);
-        return;
-    }
-
-    if (frame[0] != POWER_TYPE_SET || frame[1] != POWER_DEVICE_ID)
-    {
-        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_DEVICE, POWER_SET_FAIL);
-        return;
-    }
-
-    sub_cmd = frame[6];
-    if (sub_cmd >= POWER_EEPROM_CMD_CLEAR_WORK_HOUR)
-    {
-        if (Power_EepromHandleClear(sub_cmd) == 0)
-        {
-            Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_DATA, POWER_SET_FAIL);
-            return;
-        }
-        if (sub_cmd == POWER_EEPROM_CMD_CLEAR_WORK_HOUR || sub_cmd == POWER_EEPROM_CMD_CLEAR_ALL)
-        {
-            Power_SetWorkHour(0);
-        }
-    }
-    else if (Power_EepromHandleSet(sub_cmd, &frame[7], 6) == 0)
-    {
-        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_DATA, POWER_SET_FAIL);
-        return;
-    }
-    else if (sub_cmd == POWER_EEPROM_CMD_SET_WORK_HOUR)
-    {
-        Power_SetWorkHour(Power_EepromGetWorkHour());
-    }
-
-    Power_SendAck(POWER_MSG_BOARD_CFG, POWER_ACK, 0x00, POWER_SET_OK);
-}
-
-/* Power_HandleUpdateData：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_HandleUpdateData
+** 功能描述: 电源模块业务处理函数。
+** 参数说明:
+********************************************************************************/
 static void Power_HandleUpdateData(uint8_t *frame, uint16_t frame_len)
 {
-    
     uint8_t packet_type;
-    
     uint8_t name_len;
-    
     uint16_t pack_no;
-    
     uint16_t text_len;
 
     if (Power_CheckFrameLen(frame, frame_len) != UART_PROTOCOL_OK || frame_len != (UART_UPDATE_FRAME_TOTAL_LEN - 2))
@@ -323,7 +298,11 @@ static void Power_HandleUpdateData(uint8_t *frame, uint16_t frame_len)
     Power_SendUpdateDataAck(POWER_UPDATE_CONFIRM_OK, &frame[10], name_len, pack_no);
 
 #if POWER_UPDATE_REPORT_AUTO_SEND_ENABLE
-    /* 0x041F自动发送框架：；收到数据结束包后，可向上位机反馈待升级总程序CRC结果。；当前应用层未接Bootloader完整CRC计算，默认宏关闭；接入后可填入真实CRC。 */
+    /*
+     * 0x041F自动发送框架：
+     * 收到数据结束包后，可向上位机反馈待升级总程序CRC结果。
+     * 当前应用层未接Bootloader完整CRC计算，默认宏关闭；接入后可填入真实CRC。
+     */
     if (packet_type == POWER_UPDATE_PACKET_END)
     {
         Power_SendUpdateReport(POWER_UPDATE_REPORT_CRC, &frame[10], name_len, 0x0000);
@@ -331,7 +310,6 @@ static void Power_HandleUpdateData(uint8_t *frame, uint16_t frame_len)
 #endif
 }
 
-/* Power_HandleHostAck：解析0x0400外部管理软件到电源模块的内部ACK/NAK应答 */
 static void Power_HandleHostAck(uint8_t *frame, uint16_t frame_len)
 {
     uint16_t ack_msg_id;
@@ -362,7 +340,12 @@ static void Power_HandleHostAck(uint8_t *frame, uint16_t frame_len)
     Power_SaveHostAck(ack_msg_id, ack_nak, err_code, set_flag);
 }
 
-/* Power_HandleUpdateReportAck：解析0x040F外部管理软件到电源模块的软件升级报告应答 */
+/*******************************************************************************
+** 函数名称: Power_HandleUpdateReportAck
+** 功能描述: 解析0x040F外部管理软件到电源模块的软件升级报告应答。
+** 参数说明: frame=不含SLIP和CRC的协议帧，frame_len=帧头+消息体长度。
+** 返回说明: 无。
+********************************************************************************/
 static void Power_HandleUpdateReportAck(uint8_t *frame, uint16_t frame_len)
 {
     uint8_t ack_value;
@@ -393,10 +376,14 @@ static void Power_HandleUpdateReportAck(uint8_t *frame, uint16_t frame_len)
     Power_SaveUpdateReportAck(ack_value, &frame[10], name_len, report_crc);
 }
 
-/* Power_HandleProtocolFrame：电源模块业务处理函数 */
+/*******************************************************************************
+** 函数名称: Power_HandleProtocolFrame
+** 功能描述: 电源模块业务处理函数。
+** 参数说明: 参见函数形参定义，保持原工程接口不改变。
+** 返回说明: 参见函数返回类型。
+********************************************************************************/
 static void Power_HandleProtocolFrame(uint8_t *frame, uint16_t frame_len)
 {
-    
     uint16_t msg_id;
 
     if (frame_len < 6)
@@ -429,10 +416,6 @@ static void Power_HandleProtocolFrame(uint8_t *frame, uint16_t frame_len)
         Power_HandleControl(frame, frame_len);
         break;
 
-    case POWER_MSG_BOARD_CFG:
-        Power_HandleBoardCfg(frame, frame_len);
-        break;
-
     case POWER_MSG_UPDATE_DATA:
         Power_HandleUpdateData(frame, frame_len);
         break;
@@ -450,8 +433,10 @@ static void Power_HandleProtocolFrame(uint8_t *frame, uint16_t frame_len)
     }
 }
 
-/* main：只做三件事：建队列/信号量，初始化硬件，创建start_task */
-
+/*******************************************************************************
+** 函数名称: main
+** 功能描述: 只做三件事：建队列/信号量，初始化硬件，创建start_task
+********************************************************************************/
 int main(void)
 {
     Queuehandler_USART = xQueueCreate(1, sizeof(Queue_USART));
@@ -475,8 +460,10 @@ int main(void)
     }
 }
 
-/* start_task：统一创建业务任务，创建完成后删除自己 */
-/* start_task：创建业务任务后删除自身的启动任务 */
+/*******************************************************************************
+** 函数名称: start_task
+** 功能描述: 统一创建业务任务，创建完成后删除自己
+********************************************************************************/
 void start_task(void *pvParameters)
 {
     taskENTER_CRITICAL();
@@ -522,8 +509,10 @@ void start_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-/* ADC_task：只负责ADC采样滤波和数据换算，不负责串口主动上传 */
-/* ADC_task：周期执行ADC采样换算任务 */
+/*******************************************************************************
+** 函数名称: ADC_task
+** 功能描述: 只负责ADC采样滤波和数据换算，不负责串口主动上传
+********************************************************************************/
 void ADC_task(void *pvParameters)
 {
     while (1)
@@ -533,13 +522,15 @@ void ADC_task(void *pvParameters)
     }
 }
 
-/* StatusReport_task：取消主动上传0x0412状态帧；只保留后台计时 */
+/*******************************************************************************
+** 函数名称: StatusReport_task
+** 功能描述: 取消主动上传0x0412状态帧；只保留后台计时
+********************************************************************************/
 
 void StatusReport_task(void *pvParameters)
 {
-    
+
 #if POWER_SELF_CHECK_AUTO_REPORT_ENABLE
-    /* 保留旧逻辑：如果宏改为1，上电延时后主动发送一次0x0412。默认宏为0，不编译。 */
     vTaskDelay(500);
     Power_SendStatusReport(power_self_check_type);
 #endif
@@ -551,19 +542,18 @@ void StatusReport_task(void *pvParameters)
     }
 }
 
-/* USART_task：接收PB10/PB11外部ICD帧，同时轮询PA2/PA3从机采集帧 */
-/* USART_task：周期执行串口发送或接收处理任务 */
+/*******************************************************************************
+** 函数名称: USART_task
+** 功能描述: 接收PB10/PB11外部ICD帧，同时轮询PA2/PA3从机采集帧
+********************************************************************************/
+
 void USART_task(void *pvParameters)
 {
-    
     static uint8_t raw_buff[UART_FRAME_MAX_LEN];
-    
     static uint8_t frame_buff[UART_FRAME_MAX_LEN];
-    
     uint16_t raw_len;
-    
     uint16_t frame_len;
-    
+
     uint8_t ret;
 
     while (1)
@@ -580,7 +570,11 @@ void USART_task(void *pvParameters)
         ret = uart_protocol_unpack(raw_buff, raw_len, frame_buff, &frame_len);
         if (ret != UART_PROTOCOL_OK)
         {
-            Power_SendProtocolErrorByRaw(raw_buff, raw_len, ret);
+            /* CRC错误帧必须严格丢弃，不能回ACK/NAK，也不能回0x041E */
+            if (ret != UART_PROTOCOL_ERR_CRC)
+            {
+                Power_SendProtocolErrorByRaw(raw_buff, raw_len, ret);
+            }
             continue;
         }
 
@@ -588,13 +582,15 @@ void USART_task(void *pvParameters)
     }
 }
 
-/* LED_task：正常亮绿灯，故障/告警亮红灯 */
+/*******************************************************************************
+** 函数名称: LED_task
+** 功能描述: 正常亮绿灯，故障/告警亮红灯
+********************************************************************************/
 
 void LED_task(void *pvParameters)
 {
     while (1)
     {
-        /* 不再读取FreeRTOS事件组事件位。；power.c统一维护故障/告警状态，LED只根据Power_IsFaultOrWarn()显示。 */
         if (Power_IsFaultOrWarn() != 0)
         {
             LED_G1_OFF;
@@ -615,10 +611,13 @@ void LED_task(void *pvParameters)
 }
 
 #if uart_debug
-
+/*******************************************************************************
+** 函数名称: test_task
+** 功能描述: test_task函数，保持原工程接口并完成对应模块处理。
+** 参数说明: 
+********************************************************************************/
 void test_task(void *pvParameters)
 {
-    
     char strbuf1[700];
 
     while (1)
@@ -637,13 +636,20 @@ void test_task(void *pvParameters)
 }
 #endif
 
+/*******************************************************************************
+** 函数名称: fputc
+** 功能描述: 
+********************************************************************************/
 int fputc(int ch, FILE *f)
 {
     Usart_SendByte(DEBUG_USARTx, (uint8_t)ch);
-    
     return ch;
 }
 
+/*******************************************************************************
+** 函数名称: fgetc
+** 功能描述:
+********************************************************************************/
 int fgetc(FILE *f)
 {
     while (usart_flag_get(DEBUG_USARTx, USART_FLAG_RBNE) == RESET)
@@ -651,8 +657,12 @@ int fgetc(FILE *f)
     return (int)usart_data_receive(DEBUG_USARTx);
 }
 
-/* SYS_Init：初始化GPIO、NVIC、DMA、ADC、定时器、滤波器、串口和默认电源状态 */
-/* SYS_Init：48PIN主机系统初始化入口 */
+
+/*******************************************************************************
+** 函数名称: SYS_Init
+** 功能描述: 主机系统初始化入口。
+
+********************************************************************************/
 void SYS_Init(void)
 {
     GPIO_init_all();
@@ -661,14 +671,18 @@ void SYS_Init(void)
     Adc_Init();
     TIM2_init_all(499, 1199);
     Filter_Init();
-    uart_init(115200);       // PA2/PA3，USART1，两个单片机之间通信
-    uart2_init(115200);      // PB10/PB11，USART2，对外管理协议通信
+    uart_init(115200);    // PA2/PA3，USART1，两个单片机之间通信
+    uart2_init(115200);   // PB10/PB11，USART2，对外管理协议通信
     NVIC_init_all();
     delay_ms(50);
 
     EN_12V_KZ_ON;
     EN_28V_KZ_ON;
-    EN_F28V_KZ_OFF;
+    EN_F28V_KZ_ON;
+		G_PWM_ON;
+		VOPEN_ON;
+		GZ_ON;
+	
     Power_EepromInit();
     Power_SetWorkHour(Power_EepromGetWorkHour());
     Power_ClearMaxMin();

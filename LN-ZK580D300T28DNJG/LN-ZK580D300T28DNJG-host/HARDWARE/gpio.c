@@ -61,15 +61,23 @@ void GPIO_init_all(void)
     gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
               GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8);
 
-    // Vopen -- PA12
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+//    // Vopen -- PA12
+			gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+//    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
 
-    // G-PWM -- PA11，未确认PWM定时器映射，先配置为浮空输入避免误驱动
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+//    // G-PWM -- PA11，未确认PWM定时器映射，先配置为浮空输入避免误驱动
+//    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+			gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
+			
+			//GZ--PA8对应运行灯
+			gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
 
     EN_12V_KZ_OFF;
     EN_28V_KZ_OFF;
     EN_F28V_KZ_OFF;
+	  G_PWM_OFF;
+		VOPEN_OFF;
+		GZ_OFF;
     LED_R1_OFF;
     LED_R2_OFF;
     LED_G1_OFF;
