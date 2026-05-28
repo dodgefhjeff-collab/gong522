@@ -555,16 +555,22 @@ void Power_SendSelfCheck(uint8_t self_check_type)
     buff[75] = (uint8_t)((power_work_hour >> 8) & 0xFF);
     buff[76] = (uint8_t)(power_work_hour & 0xFF);
 
-    // 风机状态：bit7~bit15表示风机1~9，0运转，1停转；优先使用28PIN从板风速检测
-    if ((power_fan_switch == POWER_FAN_ON) &&
-        ((power_slave_online == 0) || (power_slave_fan_speed != 0)))
+    // 风机状态：bit15~bit7表示风机1~9，0运转，1停转
+    if (power_slave_online != 0)
     {
+        // 从机上传帧的11~12字节携带RD检测位图
+        buff[77] = (uint8_t)((power_slave_s0 >> 8) & 0xFF);
+        buff[78] = (uint8_t)(power_slave_s0 & 0xFF);
+    }
+    else if ((power_fan_switch == POWER_FAN_ON) && (power_slave_fan_speed != 0))
+    {
+        // 从机未在线时的降级逻辑：有转速判定为全运转
         buff[77] = 0x00;
         buff[78] = 0x00;
     }
     else
     {
-        // bit15~bit7均置1，表示风机1~9停转
+        // 从机未在线且无转速时，默认全停转
         buff[77] = 0xFF;
         buff[78] = 0x80;
     }

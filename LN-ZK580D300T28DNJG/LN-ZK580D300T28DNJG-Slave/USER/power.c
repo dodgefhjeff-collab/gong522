@@ -205,6 +205,56 @@ static void Power_FillU16(uint8_t *buff, uint8_t index, uint16_t data)
     buff[index + 1] = (uint8_t)((data >> 8) & 0xFF);
 }
 
+static void Power_SetRdSelect(uint8_t index)
+{
+    if ((index & 0x04U) != 0U)
+    {
+        FAN_RD_S2_HIGH;
+    }
+    else
+    {
+        FAN_RD_S2_LOW;
+    }
+
+    if ((index & 0x02U) != 0U)
+    {
+        FAN_RD_S1_HIGH;
+    }
+    else
+    {
+        FAN_RD_S1_LOW;
+    }
+
+    if ((index & 0x01U) != 0U)
+    {
+        FAN_RD_S0_HIGH;
+    }
+    else
+    {
+        FAN_RD_S0_LOW;
+    }
+}
+
+/* bit15~bit7 对应风机1~9，0运转，1停转 */
+static uint16_t Power_ReadFanStatusBits(void)
+{
+    uint8_t i;
+    uint16_t fan_bits = 0;
+
+    for (i = 0; i < 9U; i++)
+    {
+        Power_SetRdSelect(i);
+        delay_us(20);
+
+        if (Y_output != 0U)
+        {
+            fan_bits |= (uint16_t)(1U << (15U - i));
+        }
+    }
+
+    return fan_bits;
+}
+
 
 /*******************************************************************************
 ** : Power_FillUploadFrame
@@ -237,7 +287,7 @@ void Power_FillUploadFrame(void)
     // F_PWMǰȽֵ
     Power_FillU16(USART1_TX_BUF, 9, F_PWM_Value);
 
-    // S0
+    // 风机状态位图（bit15~bit7 对应风机1~9）
     Power_FillU16(USART1_TX_BUF, 11, value_S0);
 
     // S1
@@ -288,10 +338,10 @@ void DataConversion()
     value_F28VU = ADC_F28VU;
     value_FAN_SPEED = ADC_FAN_SPEED;
     value_I_F1 = ADC_I_F1;
+    value_S0 = Power_ReadFanStatusBits();
     value_Y = (uint16_t)Y_output;
-    value_S0 = ADC_S0;
-    value_S1 = ADC_S1;
-    value_S2 = ADC_S2;
+    value_S1 = 0;
+    value_S2 = 0;
     value_TEMP = ADC_TEMP;
     wendu = (short)value_TEMP;
 

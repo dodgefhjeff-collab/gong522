@@ -31,9 +31,15 @@
 /* 宏定义说明：GZ2_LED1，GZ2_LED1宏定义，用于保持原工程风格并集中配置相关参数。 */
 #define GZ2_LED1 gpio_input_bit_get(GPIOB, GPIO_PIN_7)
 
-/* PA4ΪԭͼYźţΪĴǰ״̬ */
+/* 风机RD多路检测：S2=PA7，S1=PB0，S0=PB1，Y=PA4 */
+#define FAN_RD_S2_HIGH  gpio_bit_set(GPIOA, GPIO_PIN_7)
+#define FAN_RD_S2_LOW   gpio_bit_reset(GPIOA, GPIO_PIN_7)
+#define FAN_RD_S1_HIGH  gpio_bit_set(GPIOB, GPIO_PIN_0)
+#define FAN_RD_S1_LOW   gpio_bit_reset(GPIOB, GPIO_PIN_0)
+#define FAN_RD_S0_HIGH  gpio_bit_set(GPIOB, GPIO_PIN_1)
+#define FAN_RD_S0_LOW   gpio_bit_reset(GPIOB, GPIO_PIN_1)
 /* 宏定义说明：Y_output，Y_output宏定义，用于保持原工程风格并集中配置相关参数。 */
-#define Y_output gpio_output_bit_get(GPIOA, GPIO_PIN_4)
+#define Y_output gpio_input_bit_get(GPIOA, GPIO_PIN_4)
 
 
 

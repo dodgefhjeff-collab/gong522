@@ -64,8 +64,8 @@ void  GPIO_init_all()
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_3);
 
     /****************************ADC GPIOʼ*****************************************/
-    // S2PA7/ADC7
-    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_7);
+    // S2PA7（RD多路选择输出）
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_7);
 
     // F9-RDPA6/ADC6ټ
     gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_6);
@@ -79,14 +79,18 @@ void  GPIO_init_all()
     // ADC_TEMP/F-PWMԤPA5/ADC5
     gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_5);
 
-    // S1PB0/ADC8S0PB1/ADC9
-    gpio_init(GPIOB, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_0 | GPIO_PIN_1);
+    // S1PB0/S0PB1（RD多路选择输出）
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_0 | GPIO_PIN_1);
 
     /****************************GPIO*****************************************/
     // GZ2LED1
     gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_7);
 
-    // Y
-    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_4);
+    // Y（RD检测输入）
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_4);
+
+    FAN_RD_S2_LOW;
+    FAN_RD_S1_LOW;
+    FAN_RD_S0_LOW;
 }
 

@@ -244,7 +244,7 @@ static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 
     if ((fan_switch != POWER_FAN_OFF && fan_switch != POWER_FAN_ON) ||
         Power_IsValidDuty(duty) == 0 ||
-        (clear_flag != 0x00 && clear_flag != 0x01))
+        (clear_flag > POWER_CLEAR_MAXMIN_AND_HOUR))
     {
         Power_SendAck(POWER_MSG_CONTROL, POWER_NAK, UART_PROTOCOL_ERR_DATA, POWER_SET_FAIL);
         return;
@@ -252,12 +252,75 @@ static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 
     Power_SetFan(fan_switch, duty);
     Power_SendSlaveControl(fan_switch, duty, clear_flag);
-    if (clear_flag == 0x01)
+    if (clear_flag == POWER_CLEAR_MAXMIN || clear_flag == POWER_CLEAR_MAXMIN_AND_HOUR)
     {
         Power_ClearMaxMin();
     }
+    if (clear_flag == POWER_CLEAR_WORK_HOUR || clear_flag == POWER_CLEAR_MAXMIN_AND_HOUR)
+    {
+        Power_SetWorkHour(0);
+        Power_EepromSave();
+    }
 
     Power_SendAck(POWER_MSG_CONTROL, POWER_ACK, 0x00, POWER_SET_OK);
+}
+
+static void Power_HandleBoardCfg(uint8_t *frame, uint16_t frame_len)
+{
+    uint8_t sub_cmd;
+    uint8_t ok = 0;
+
+    if (Power_CheckFrameLen(frame, frame_len) != UART_PROTOCOL_OK || frame_len != 14)
+    {
+        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_LEN, POWER_SET_FAIL);
+        return;
+    }
+
+    if (frame[0] != POWER_TYPE_SET || frame[1] != POWER_DEVICE_ID)
+    {
+        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_DEVICE, POWER_SET_FAIL);
+        return;
+    }
+
+    sub_cmd = frame[6];
+    switch (sub_cmd)
+    {
+    case POWER_EEPROM_CMD_SET_WORK_HOUR:
+        ok = Power_EepromHandleSet(sub_cmd, &frame[7], 3);
+        if (ok != 0)
+        {
+            Power_SetWorkHour(Power_EepromGetWorkHour());
+        }
+        break;
+    case POWER_EEPROM_CMD_SET_BOARD_ID:
+        ok = Power_EepromHandleSet(sub_cmd, &frame[7], 6);
+        break;
+    case POWER_EEPROM_CMD_SET_MFG_DATE:
+        ok = Power_EepromHandleSet(sub_cmd, &frame[7], 3);
+        break;
+    case POWER_EEPROM_CMD_CLEAR_WORK_HOUR:
+    case POWER_EEPROM_CMD_CLEAR_BOARD_ID:
+    case POWER_EEPROM_CMD_CLEAR_MFG_DATE:
+    case POWER_EEPROM_CMD_CLEAR_ALL:
+        ok = Power_EepromHandleClear(sub_cmd);
+        if (ok != 0)
+        {
+            Power_SetWorkHour(Power_EepromGetWorkHour());
+        }
+        break;
+    default:
+        ok = 0;
+        break;
+    }
+
+    if (ok != 0)
+    {
+        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_ACK, 0x00, POWER_SET_OK);
+    }
+    else
+    {
+        Power_SendAck(POWER_MSG_BOARD_CFG, POWER_NAK, UART_PROTOCOL_ERR_DATA, POWER_SET_FAIL);
+    }
 }
 
 /*******************************************************************************
@@ -414,6 +477,10 @@ static void Power_HandleProtocolFrame(uint8_t *frame, uint16_t frame_len)
 
     case POWER_MSG_CONTROL:
         Power_HandleControl(frame, frame_len);
+        break;
+
+    case POWER_MSG_BOARD_CFG:
+        Power_HandleBoardCfg(frame, frame_len);
         break;
 
     case POWER_MSG_UPDATE_DATA:
