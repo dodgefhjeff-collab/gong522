@@ -13,22 +13,22 @@ void MYDMA_Config(void)
     rcu_periph_clock_enable(RCU_DMA0);
 
     /*  */
-    /* ADC0 相关DMA配置 */
-    /*  */
-    dma_deinit(DMA0, DMA_CH0);                                // ADC0 -> DMA0_CH0
-    dma_struct_para_init(&DMA_InitStructure);
-    DMA_InitStructure.periph_addr  = (uint32_t)&ADC_RDATA(ADC0);
-    DMA_InitStructure.memory_addr  = (uint32_t)&AD_Value;
-    DMA_InitStructure.direction    = DMA_PERIPHERAL_TO_MEMORY;
-    DMA_InitStructure.number       = M * N;
-    DMA_InitStructure.periph_inc   = DMA_PERIPH_INCREASE_DISABLE;
-    DMA_InitStructure.memory_inc   = DMA_MEMORY_INCREASE_ENABLE;
-    DMA_InitStructure.periph_width = DMA_PERIPHERAL_WIDTH_16BIT;
-    DMA_InitStructure.memory_width = DMA_MEMORY_WIDTH_16BIT;
-    DMA_InitStructure.priority     = DMA_PRIORITY_HIGH;
-    dma_init(DMA0, DMA_CH0, &DMA_InitStructure);
-    dma_circulation_enable(DMA0, DMA_CH0);
-    dma_memory_to_memory_disable(DMA0, DMA_CH0);
+//    /* ADC0 相关DMA配置 */
+//    /*  */
+//    dma_deinit(DMA0, DMA_CH0);                                // ADC0 -> DMA0_CH0
+//    dma_struct_para_init(&DMA_InitStructure);
+//    DMA_InitStructure.periph_addr  = (uint32_t)&ADC_RDATA(ADC0);
+//    DMA_InitStructure.memory_addr  = (uint32_t)&AD_Value;
+//    DMA_InitStructure.direction    = DMA_PERIPHERAL_TO_MEMORY;
+//    DMA_InitStructure.number       = M * N;
+//    DMA_InitStructure.periph_inc   = DMA_PERIPH_INCREASE_DISABLE;
+//    DMA_InitStructure.memory_inc   = DMA_MEMORY_INCREASE_ENABLE;
+//    DMA_InitStructure.periph_width = DMA_PERIPHERAL_WIDTH_16BIT;
+//    DMA_InitStructure.memory_width = DMA_MEMORY_WIDTH_16BIT;
+//    DMA_InitStructure.priority     = DMA_PRIORITY_HIGH;
+//    dma_init(DMA0, DMA_CH0, &DMA_InitStructure);
+//    dma_circulation_enable(DMA0, DMA_CH0);
+//    dma_memory_to_memory_disable(DMA0, DMA_CH0);
 
     /*  */
     /* USART1_TX DMA配置：PA2内部通信口 */

@@ -440,7 +440,7 @@ void Power_SetFan(uint8_t fan_switch, uint8_t duty_code)
 void DATA_Convert(void)
 {
     compute_Voltage();
-    Weighted_Moving_Average(Average, Average_filter);
+//    Weighted_Moving_Average(Average, Average_filter);
 
     wendu = Temp_transition_int(ADC_TEMP);
     value_TEMP = (uint16_t)(Power_EncodeTemperature(wendu));
@@ -527,7 +527,7 @@ void Power_SendSelfCheck(uint8_t self_check_type)
     buff[18] = Power_GetFaultOrWarnState();
 
     Power_FillU16(buff, 19, value_VIN_U);
-    Power_FillU16(buff, 21, value_VIN_U);          // 中间转换电压，厂家提供值；当前无独立采样，暂用VIN
+    Power_FillU16(buff, 21, value_VIN_U);       // 中间转换电压，厂家提供值；当前无独立采样，暂用VIN
     Power_FillU16(buff, 23, power_vin_u_max);
     Power_FillU16(buff, 25, power_vin_u_min);
     Power_FillU16(buff, 27, value_12V_U);

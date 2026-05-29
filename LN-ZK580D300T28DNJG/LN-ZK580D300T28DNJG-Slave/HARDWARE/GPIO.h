@@ -1,26 +1,4 @@
-/**
-  ************************************* Copyright ******************************
-  *
-  *                         (C) Copyright 2023,,China.
-  *                                 All Rights Reserved
-  *
-  *                            By(ܵӿƼ޹˾)
-  *
-  *
-  * ļ       : GPIO.H
-  * 汾         : v1.0
-  *          : 
-  * ʱ         : 2023-01-29
-  *          :
-  * б     :
-    1. ....
-          <汾>:
-      <޸Ա>:
-        <ʱ>:
-          <>:
-    2. ...
-  ******************************************************************************
- */
+
 #ifndef __GPIO_H
 /* 宏定义说明：__GPIO_H，头文件重复包含保护宏。 */
 #define __GPIO_H
@@ -38,7 +16,7 @@
 #define FAN_RD_S1_LOW   gpio_bit_reset(GPIOB, GPIO_PIN_0)
 #define FAN_RD_S0_HIGH  gpio_bit_set(GPIOB, GPIO_PIN_1)
 #define FAN_RD_S0_LOW   gpio_bit_reset(GPIOB, GPIO_PIN_1)
-/* 宏定义说明：Y_output，Y_output宏定义，用于保持原工程风格并集中配置相关参数。 */
+/* 宏定义说明：Y_output，Y_output宏定义， */
 #define Y_output gpio_input_bit_get(GPIOA, GPIO_PIN_4)
 
 

@@ -27,7 +27,7 @@
 /*-------------------- 版本号 --------------------*/
 #define Mversion 1
 #define Sversion 1
-#define uart_debug 1
+#define uart_debug 0
 
 /*-------------------- 任务优先级 --------------------*/
 #define START_TASK_PRIO         1
@@ -735,9 +735,9 @@ void SYS_Init(void)
     GPIO_init_all();
     delay_init();
     MYDMA_Config();
-    Adc_Init();
+     adc_config(); 
     TIM2_init_all(499, 1199);
-    Filter_Init();
+//    Filter_Init();
     uart_init(115200);    // PA2/PA3，USART1，两个单片机之间通信
     uart2_init(115200);   // PB10/PB11，USART2，对外管理协议通信
     NVIC_init_all();

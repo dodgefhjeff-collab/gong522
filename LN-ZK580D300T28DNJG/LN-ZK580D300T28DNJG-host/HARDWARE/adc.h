@@ -1,70 +1,105 @@
+/**
+  ************************************* Copyright ******************************
+  *  
+  *                         (C) Copyright 2023,,China.
+  *                                 All Rights Reserved
+  *                              
+  *                            By(ܵӿƼ޹˾)
+  *                     
+  *      
+  * ļ       : adc.h   
+  * 汾         : v1.0		
+  *          : 			
+  * ʱ         : 2023-01-29         
+  *          :    
+  * б     :  
+  	1. ....
+  	      <汾>: 		
+      <޸Ա>:
+  		  <ʱ>:
+          <>:  
+  	2. ...
+  ******************************************************************************
+ */
 #ifndef __ADC_H
-
+/* 宏定义说明：__ADC_H，头文件重复包含保护宏。 */
 #define __ADC_H
 
-#include "sys.h"
+#include "gd32c10x.h"
 
-#define Rp 10000
 
-#define T2 298.15
-
+/* 宏定义说明：Rp，Rp宏定义，用于保持原工程风格并集中配置相关参数。 */
+#define Rp 10000            //10k
+/* 宏定义说明：T2，T2宏定义，用于保持原工程风格并集中配置相关参数。 */
+#define T2 298.15           //  T2,273.15+25.0
+/* 宏定义说明：Bx，Bx宏定义，用于保持原工程风格并集中配置相关参数。 */
 #define Bx 3435.0
-
+/* 宏定义说明：Ka，Ka宏定义，用于保持原工程风格并集中配置相关参数。 */
 #define Ka 273.15
 
-#define N 50
+/* 宏定义说明：ADC_DMA_SCAN，ADC采样、通道数量或滤波深度相关宏。 */
+#define ADC_DMA_SCAN            //ADCDMAɨģʽ
+/* 宏定义说明：N，ADC采样、通道数量或滤波深度相关宏。 */
+#define N 50 //ÿͨ50Σƽ
+/* 宏定义说明：M，ADC采样、通道数量或滤波深度相关宏。 */
+#define M 7  //Ϊ7ͨ
 
-#define M 7
+/* 宏定义说明：adc1_order_num，ADC采样、通道数量或滤波深度相关宏。 */
+#define adc1_order_num N
+/* 宏定义说明：adc1_ch_num，ADC采样、通道数量或滤波深度相关宏。 */
+#define adc1_ch_num    M
 
-#define adc_ref 3.3
+//Ȩ˲㷨
+/* 宏定义说明：CHANNELS，ADC采样、通道数量或滤波深度相关宏。 */
+#define CHANNELS adc1_ch_num       // ͨ
+/* 宏定义说明：FILTER_DEPTH，ADC采样、通道数量或滤波深度相关宏。 */
+#define FILTER_DEPTH 50 // ˲
 
-#define CHANNELS M
 
-#define FILTER_DEPTH 50
 
-#define ADC_TEMP   Average_filter[0]
-
-#define ADC_12V_I  Average_filter[1]
-
-#define ADC_12V_U  Average_filter[2]
-
-#define ADC_28V_I  Average_filter[3]
-
-#define ADC_28V_U  Average_filter[4]
-
-#define ADC_VIN_I  Average_filter[5]
-
-#define ADC_VIN_U  Average_filter[6]
-
-extern uint16_t AD_Value[N][M];
-
-extern uint16_t Average[M];
-
-extern uint16_t Average_filter[M];
-
+// Ȩ˲㷨ÿͨݽṹ
 typedef struct
 {
-    
-    uint16_t history[FILTER_DEPTH];
-    
-    uint32_t filtered_value;
-    
-    uint8_t index;
-    
-    uint16_t weights[FILTER_DEPTH];
+    /* 变量说明：history，history变量，用于保存当前模块运行过程中的状态或临时数据。 */
+    uint16_t history[FILTER_DEPTH];  // 洢ʷ
+    /* 变量说明：filtered_value，filtered_value变量，用于保存当前模块运行过程中的状态或临时数据。 */
+    uint32_t filtered_value;         // 洢˲ֵʹøԱ
+    /* 变量说明：index，index变量，用于保存当前模块运行过程中的状态或临时数据。 */
+    uint8_t index;                   // ǰ
+    /* 变量说明：weights，weights变量，用于保存当前模块运行过程中的状态或临时数据。 */
+    uint16_t weights[FILTER_DEPTH];  // ÿͨȨ
 } FilterChannel;
 
-/* 函数声明说明：Adc_Init，ADC采样、滤波或数据换算函数。 */
-extern void Adc_Init(void);
-/* 函数声明说明：Get_Adc，ADC采样、滤波或数据换算函数。 */
-uint16_t Get_Adc(uint8_t ch);
-/* 函数声明说明：Get_Adc_Average，ADC采样、滤波或数据换算函数。 */
-uint16_t Get_Adc_Average(uint8_t ch, uint8_t times);
+
+/* 变量说明：adc1_result，adc1_result变量，用于保存当前模块运行过程中的状态或临时数据。 */
+extern uint16_t  adc1_result[adc1_ch_num];                       //adc
+/* 变量说明：Average_filter，ADC加权递推滤波结果数组。 */
+extern uint16_t  Average_filter[adc1_ch_num]; //˲Ľ
+/* 变量说明：channels，channels变量，用于保存当前模块运行过程中的状态或临时数据。 */
+extern FilterChannel channels[CHANNELS]; // ͨ˲ݽṹ
+
+
+/*ADCʼ*/
+/* 函数声明说明：adc_config，ADC采样、滤波或数据换算函数。 */
+void adc_config(void);
+
+/*ƽֵȡ*/
+/* 函数声明说明：FilterRecursive，ADC采样、滤波或数据换算函数。 */
+uint16_t FilterRecursive(uint8_t ch);
+/*ڲ¶ֵȡ*/
+/* 函数声明说明：Get_the_temperature_value，ADC采样、滤波或数据换算函数。 */
+char Get_the_temperature_value(void);
+/* 函数声明说明：Weighted_Moving_Average，ADC采样、滤波或数据换算函数。 */
+void Weighted_Moving_Average(const uint16_t* new_data, uint16_t* filtered_data);
+//ADCֵת
 /* 函数声明说明：compute_Voltage，ADC采样、滤波或数据换算函数。 */
 void compute_Voltage(void);
-/* 函数声明说明：Filter_Init，ADC采样、滤波或数据换算函数。 */
-void Filter_Init(void);
-/* 函数声明说明：Weighted_Moving_Average，ADC采样、滤波或数据换算函数。 */
-void Weighted_Moving_Average(uint16_t *new_data, uint16_t *filtered_data);
 
+#ifndef ADC_DMA_SCAN
+/* 函数声明说明：Get_Adc_Average，ADC采样、滤波或数据换算函数。 */
+uint16_t Get_Adc_Average(uint8_t ch,uint8_t times);
+/* 函数声明说明：adc_channel_sample，ADC采样、滤波或数据换算函数。 */
+uint16_t adc_channel_sample(uint8_t channel);
 #endif
+
+#endif /* ADC_H */

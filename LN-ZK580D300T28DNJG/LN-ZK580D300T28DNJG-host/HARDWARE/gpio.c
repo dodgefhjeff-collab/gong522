@@ -39,9 +39,9 @@ void GPIO_init_all(void)
     gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
 
     /* ADC GPIO初始化**************************************** */
-    // 采样：PA7=12VI，PA5=12VU，PA6=28VI，PA4=28VU，PA1=VINI，PA0=VINU，PB1=温度
+    // 采样：PB1=12VI，PA7=12VU，PA6=28VI，PA5=28VU，PA4=VINI，PA0=VINU，PB1=温度
     gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ,
-              GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_0 | GPIO_PIN_1);
+              GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_0);
     gpio_init(GPIOB, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, GPIO_PIN_1 | GPIO_PIN_0);
 
     /* SPI相关GPIO初始化**************************************** */
@@ -71,17 +71,21 @@ void GPIO_init_all(void)
 			
 			//GZ--PA8对应运行灯
 			gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
+			
+			
+			//SRDD
+			gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
 
-    EN_12V_KZ_OFF;
-    EN_28V_KZ_OFF;
-    EN_F28V_KZ_OFF;
-	  G_PWM_OFF;
-		VOPEN_OFF;
-		GZ_OFF;
-    LED_R1_OFF;
-    LED_R2_OFF;
-    LED_G1_OFF;
-    LED_G2_OFF;
+			EN_12V_KZ_OFF;
+			EN_28V_KZ_OFF;
+			EN_F28V_KZ_OFF;
+			G_PWM_OFF;
+			VOPEN_OFF;
+			GZ_OFF;
+			LED_R1_OFF;
+			LED_R2_OFF;
+			LED_G1_OFF;
+			LED_G2_OFF;
 }
 
 
