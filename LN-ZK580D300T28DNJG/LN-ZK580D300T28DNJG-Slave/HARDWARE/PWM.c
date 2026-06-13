@@ -78,7 +78,8 @@ void pwm_config(uint16_t arr,uint16_t psc)
     /* auto-reload preload enable */
     timer_enable(TIMER0);										//ʱʹ
 
-    F_PWM_SetValue(100);
+    /* 上电默认低比较值，反相PWM下对应较高转速，与断开PWM线全速行为一致 */
+    F_PWM_SetValue(0);
 }
 
 /*******************************************************************************

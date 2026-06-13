@@ -78,6 +78,19 @@ static uint16_t Power_ReadU16LE(uint8_t *buff)
     return ((uint16_t)buff[1] << 8) | buff[0];
 }
 
+static uint16_t Power_FloatToU16Safe(float value)
+{
+    if (value < 0.0f)
+    {
+        return 0U;
+    }
+    if (value > 65535.0f)
+    {
+        return 65535U;
+    }
+    return (uint16_t)(value + 0.5f);
+}
+
 
 /* Power_EncodeTemperature：电源模块业务处理函数 */
 static uint8_t Power_EncodeTemperature(int16_t temp)
@@ -446,37 +459,35 @@ void DATA_Convert(void)
     wendu = Temp_transition_int(ADC_TEMP);
     value_TEMP = (uint16_t)(Power_EncodeTemperature(wendu));
 
-//    value_12V_I = Power_FloatToU16Safe(
-//        -5.317660675E-08f * ADC_12V_I * ADC_12V_I * ADC_12V_I +
-//         5.852143557E-05f * ADC_12V_I * ADC_12V_I +
-//         0.3978594518f * ADC_12V_I + 2.899096952f);
+    value_12V_I = Power_FloatToU16Safe(
+        -5.317660675E-08f * ADC_12V_I * ADC_12V_I * ADC_12V_I +
+         5.852143557E-05f * ADC_12V_I * ADC_12V_I +
+         0.3978594518f * ADC_12V_I + 2.899096952f);
 
-//    value_12V_U = Power_FloatToU16Safe(
-//         2.022636067E-08f * ADC_12V_U * ADC_12V_U * ADC_12V_U +
-//        -6.558812539E-05f * ADC_12V_U * ADC_12V_U +
-//         0.6727864702f * ADC_12V_U + 1.06591119f);
+    value_12V_U = Power_FloatToU16Safe(
+         2.022636067E-08f * ADC_12V_U * ADC_12V_U * ADC_12V_U +
+        -6.558812539E-05f * ADC_12V_U * ADC_12V_U +
+         0.6727864702f * ADC_12V_U + 1.06591119f);
 
-//    value_28V_I = Power_FloatToU16Safe(
-//         1.338135391E-08f * ADC_28V_I * ADC_28V_I * ADC_28V_I +
-//        -3.677938085E-05f * ADC_28V_I * ADC_28V_I +
-//         0.6425711879f * ADC_28V_I - 4.303419695f);
+    value_28V_I = Power_FloatToU16Safe(
+         1.338135391E-08f * ADC_28V_I * ADC_28V_I * ADC_28V_I +
+        -3.677938085E-05f * ADC_28V_I * ADC_28V_I +
+         0.6425711879f * ADC_28V_I - 4.303419695f);
 
-//    /* value_28V_U：若当前校准系数与实际电路不符，请根据实测分压比重新拟合多项式 */
-//    value_28V_U = Power_FloatToU16Safe(
-//         1.338135391E-08f * ADC_28V_U * ADC_28V_U * ADC_28V_U +
-//        -3.677938085E-05f * ADC_28V_U * ADC_28V_U +
-//         0.6425711879f * ADC_28V_U - 4.303419695f);
+    value_28V_U = Power_FloatToU16Safe(
+         1.338135391E-08f * ADC_28V_U * ADC_28V_U * ADC_28V_U +
+        -3.677938085E-05f * ADC_28V_U * ADC_28V_U +
+         0.6425711879f * ADC_28V_U - 4.303419695f);
 
-//    value_VIN_I = Power_FloatToU16Safe(
-//         1.338135391E-08f * ADC_VIN_I * ADC_VIN_I * ADC_VIN_I +
-//        -3.677938085E-05f * ADC_VIN_I * ADC_VIN_I +
-//         0.6425711879f * ADC_VIN_I - 4.303419695f);
+    value_VIN_I = Power_FloatToU16Safe(
+         1.338135391E-08f * ADC_VIN_I * ADC_VIN_I * ADC_VIN_I +
+        -3.677938085E-05f * ADC_VIN_I * ADC_VIN_I +
+         0.6425711879f * ADC_VIN_I - 4.303419695f);
 
-//    /* value_VIN_U：若当前校准系数与实际电路不符，请根据实测分压比重新拟合多项式 */
-//    value_VIN_U = Power_FloatToU16Safe(
-//         1.338135391E-08f * ADC_VIN_U * ADC_VIN_U * ADC_VIN_U +
-//        -3.677938085E-05f * ADC_VIN_U * ADC_VIN_U +
-//         0.6425711879f * ADC_VIN_U - 4.303419695f);
+    value_VIN_U = Power_FloatToU16Safe(
+         1.338135391E-08f * ADC_VIN_U * ADC_VIN_U * ADC_VIN_U +
+        -3.677938085E-05f * ADC_VIN_U * ADC_VIN_U +
+         0.6425711879f * ADC_VIN_U - 4.303419695f);
 
     Power_UpdateMaxMin(value_VIN_U, &power_vin_u_max, &power_vin_u_min);
     Power_UpdateMaxMin(value_12V_U, &power_12v_u_max, &power_12v_u_min);
@@ -725,6 +736,7 @@ typedef enum
 
 static FanCtrlState_t fan_ctrl_state  = FAN_CTRL_STARTUP;
 static uint32_t       fan_ctrl_sec    = 0;  /* 当前阶段已计时秒数 */
+static uint8_t        fan_temp_low_first = 0; /* 上电高速结束后先切一次低速 */
 
 /*******************************************************************************
 ** 函数名称: Power_GetTempBasedDuty
@@ -780,11 +792,20 @@ void Power_FanAutoControlTick(void)
         {
             fan_ctrl_state = FAN_CTRL_TEMP;
             fan_ctrl_sec   = 0;
+            fan_temp_low_first = 1U;
         }
         break;
 
     case FAN_CTRL_TEMP:
-        duty = Power_GetTempBasedDuty();
+        if (fan_temp_low_first != 0U)
+        {
+            duty = POWER_FAN_SPEED_LOW;
+            fan_temp_low_first = 0U;
+        }
+        else
+        {
+            duty = Power_GetTempBasedDuty();
+        }
         Power_SetFan(POWER_FAN_ON, duty);
         Power_SendSlaveControl(POWER_FAN_ON, duty, 0);
         break;

@@ -81,11 +81,21 @@ uint8_t error_flag = 0;
 ** 参数说明: 参见函数形参定义，保持原工程接口不改变。
 ** 返回说明: 参见函数返回类型。
 ********************************************************************************/
+/* 4线风机反相PWM：占空比越高转速越低，断开PWM线时全速 */
+static uint16_t Power_DutyToPwmCompare(uint8_t duty_code)
+{
+    uint16_t duty_compare;
+
+    duty_compare = ((uint16_t)(duty_code >> 4) * POWER_PWM_PERIOD) / 10U;
+    if (duty_compare > POWER_PWM_PERIOD)
+    {
+        duty_compare = POWER_PWM_PERIOD;
+    }
+    return (uint16_t)(POWER_PWM_PERIOD - duty_compare);
+}
+
 void Power_SetFanControl(uint8_t fan_switch, uint8_t duty_code, uint8_t clear_flag)
 {
-    /* 变量说明：pwm_value，pwm_value变量，用于保存当前模块运行过程中的状态或临时数据。 */
-    uint16_t pwm_value;
-
     power_fan_switch = fan_switch;
     power_fan_duty = duty_code;
     power_clear_maxmin_flag = clear_flag;
@@ -94,12 +104,12 @@ void Power_SetFanControl(uint8_t fan_switch, uint8_t duty_code, uint8_t clear_fl
     {
         power_fan_switch = POWER_FAN_OFF;
         power_fan_duty = 0x00;
-        F_PWM_SetValue(0);
+        /* 关风机时输出满占空比，对应反相PWM最低转速 */
+        F_PWM_SetValue(POWER_PWM_PERIOD);
         return;
     }
 
-    pwm_value = ((uint16_t)(duty_code >> 4) * POWER_PWM_PERIOD) / 10;
-    F_PWM_SetValue(pwm_value);
+    F_PWM_SetValue(Power_DutyToPwmCompare(duty_code));
 }
 
 /*******************************************************************************
@@ -235,23 +245,63 @@ static void Power_SetRdSelect(uint8_t index)
     }
 }
 
+/* 采样RD脉冲：有电平翻转=运转(0)，无翻转=停转(1) */
+static uint8_t Power_SampleFanRunning(uint8_t use_f9)
+{
+    uint8_t i;
+    uint8_t last;
+    uint8_t sample;
+    uint8_t toggles = 0U;
+
+    if (use_f9 != 0U)
+    {
+        last = (uint8_t)F9_RD;
+    }
+    else
+    {
+        last = (uint8_t)Y_output;
+    }
+
+    for (i = 0U; i < 10U; i++)
+    {
+        delay_us(500);
+        if (use_f9 != 0U)
+        {
+            sample = (uint8_t)F9_RD;
+        }
+        else
+        {
+            sample = (uint8_t)Y_output;
+        }
+        if (sample != last)
+        {
+            toggles++;
+            last = sample;
+        }
+    }
+
+    return (toggles > 0U) ? 0U : 1U;
+}
+
 /* bit15~bit7 对应风机1~9，0运转，1停转 */
 static uint16_t Power_ReadFanStatusBits(void)
 {
     uint8_t i;
     uint16_t fan_bits = 0;
 
-    for (i = 0; i < 9U; i++)
+    for (i = 0; i < 8U; i++)
     {
         Power_SetRdSelect(i);
-        /* 等待MUX选通稳定，延时200us确保Y引脚电平可靠 */
         delay_us(200);
-
-        /* Y高电平（SET）表示该路风机停转，置对应状态位为1 */
-        if (Y_output != 0U)
+        if (Power_SampleFanRunning(0U) != 0U)
         {
             fan_bits |= (uint16_t)(1U << (15U - i));
         }
+    }
+
+    if (Power_SampleFanRunning(1U) != 0U)
+    {
+        fan_bits |= (uint16_t)(1U << 7U);
     }
 
     return fan_bits;

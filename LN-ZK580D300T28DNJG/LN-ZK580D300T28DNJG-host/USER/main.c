@@ -587,7 +587,6 @@ void ADC_task(void *pvParameters)
     while (1)
     {
         DATA_Convert();
-				compute_Voltage(); // ɼ˲
         vTaskDelay(20);
     }
 }
