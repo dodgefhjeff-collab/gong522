@@ -87,8 +87,8 @@ extern uint8_t power_clear_maxmin_flag;
 #define POWER_FAN_OFF               0x00
 /* 宏定义说明：POWER_FAN_ON，风机控制相关宏。 */
 #define POWER_FAN_ON                0x01
-/* 宏定义说明：POWER_PWM_PERIOD，电源模块业务或内部通信协议相关宏。 */
-#define POWER_PWM_PERIOD            999
+/* PWM周期比较上限，与pwm_config(899,7)对应，10kHz：72MHz/8/900=10000Hz */
+#define POWER_PWM_PERIOD            899
 
 //---------------ṹ嶨---------------//
 typedef struct

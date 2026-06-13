@@ -64,33 +64,33 @@ void  GPIO_init_all()
     gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_3);
 
     /****************************ADC GPIOʼ*****************************************/
-    // S2PA7（RD多路选择输出）
-    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_7);
-
-    // F9-RDPA6/ADC6ټ
-    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_6);
-
     // I_F1PA0/ADC0
-    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_0);
-
+    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_0);  //I_FI --- PA0
     // F28VUPA1/ADC1
-    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_1);
+    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_1);  //F28VU ---PA1
 
-    // ADC_TEMP/F-PWMԤPA5/ADC5
-    gpio_init(GPIOA, GPIO_MODE_AIN, GPIO_OSPEED_MAX, GPIO_PIN_5);
+    /****************************RD GPIOʼ*****************************************/
+    // YPA4（RD检测输入）
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_4); //Y---PA4
+
+    // F9-RDPA6（RD检测输入）
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_6);  //F9-RD---PA6
+
+    // S2PA7（RD多路选择输出）
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_7);   //S2--PA7
 
     // S1PB0/S0PB1（RD多路选择输出）
-    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_0 | GPIO_PIN_1);
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_0);  //S1 -- PB0
+		gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_1);  //S0 -- PB1
+    /****************************PWM GPIOʼ*****************************************/
+    // F-PWMPA8（风机PWM输出）
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_MAX, GPIO_PIN_8);
 
     /****************************GPIO*****************************************/
     // GZ2LED1
     gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_MAX, GPIO_PIN_7);
 
-    // Y（RD检测输入）
-    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_MAX, GPIO_PIN_4);
-
     FAN_RD_S2_LOW;
     FAN_RD_S1_LOW;
     FAN_RD_S0_LOW;
 }
-

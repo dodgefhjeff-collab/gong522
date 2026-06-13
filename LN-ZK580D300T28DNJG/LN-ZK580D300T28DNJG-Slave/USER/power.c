@@ -244,8 +244,10 @@ static uint16_t Power_ReadFanStatusBits(void)
     for (i = 0; i < 9U; i++)
     {
         Power_SetRdSelect(i);
-        delay_us(20);
+        /* 等待MUX选通稳定，延时200us确保Y引脚电平可靠 */
+        delay_us(200);
 
+        /* Y高电平（SET）表示该路风机停转，置对应状态位为1 */
         if (Y_output != 0U)
         {
             fan_bits |= (uint16_t)(1U << (15U - i));

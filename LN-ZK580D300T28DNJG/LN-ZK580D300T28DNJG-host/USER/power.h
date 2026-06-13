@@ -62,8 +62,18 @@
 #define POWER_UPDATE_REPORT_ACK_CRC_OK  0x03
 #define POWER_UPDATE_REPORT_ACK_CRC_ERR 0x04
 #define POWER_UPDATE_REPORT_AUTO_SEND_ENABLE 0
-#define POWER_FAN_PWM_USE_TIM4      0       // 若硬件确认风机PWM接TIM4_CH3/CH4，可改为1
-#define POWER_PWM_PERIOD            999
+#define POWER_FAN_PWM_USE_TIM4      0       /* 若硬件确认风机PWM接TIM4_CH3/CH4，可改为1 */
+/* PWM周期上限，与从机pwm_config(899,7)对应，10kHz：72MHz/8/900=10000Hz */
+#define POWER_PWM_PERIOD            899
+
+/* 风机自动温度控制策略 */
+#define POWER_FAN_TEMP_THRESH_HIGH  55    /* 高温阈值(°C)，高于此值全速运行 */
+#define POWER_FAN_TEMP_THRESH_MID   40    /* 中温阈值(°C)，高于此值中速运行 */
+#define POWER_FAN_SPEED_HIGH        0xA0  /* 高速占空比（100%） */
+#define POWER_FAN_SPEED_MID         0x60  /* 中速占空比（60%） */
+#define POWER_FAN_SPEED_LOW         0x30  /* 低速占空比（30%） */
+#define POWER_FAN_STARTUP_SEC       120U  /* 上电高速持续时间（秒），2分钟 */
+#define POWER_FAN_CMD_KEEP_SEC      120U  /* 外部命令控制保持时间（秒），2分钟后恢复温度控制 */
 
 /*表示是不是主动回传0412*/
 #define POWER_SELF_CHECK_AUTO_REPORT_ENABLE 0
@@ -104,13 +114,13 @@ extern uint16_t power_update_report_ack_crc;
 extern uint16_t ADC_results[M];
 
 // ADC_results 数组宏定义（用于ADC DMA采集结果）
-    // 采样：PB0=12VI，PA7=12VU，PA6=28VI，PA5=28VU，PA4=VINI，PA0=VINU，PB1=温度
+
 #define value_TEMP      ADC_results[0]   // PB1 - 温度采集
-#define value_12V_I     ADC_results[1]   // PB0 - 12V输出电流
-#define value_12V_U     ADC_results[2]   // PA7 - 12V输出电压
+#define value_12V_I     ADC_results[1]   // PA7 - 12V输出电流
+#define value_12V_U     ADC_results[2]   // PA5 - 12V输出电压
 #define value_28V_I     ADC_results[3]   // PA6 - 28V输出电流
-#define value_28V_U     ADC_results[4]   // PA5 - 28V输出电压
-#define value_VIN_I     ADC_results[5]   // PA4 - 输入电流
+#define value_28V_U     ADC_results[4]   // PA4 - 28V输出电压
+#define value_VIN_I     ADC_results[5]   // PA1 - 输入电流
 #define value_VIN_U     ADC_results[6]   // PA0 - 输入电压
 
 // Average_filter 数组宏定义（用于滤波后的结果）
@@ -181,6 +191,12 @@ void Power_SaveUpdateReportAck(uint8_t ack_value, uint8_t *name, uint8_t name_le
 void Power_SendUpdateReport(uint8_t report_state, uint8_t *name, uint8_t name_len, uint16_t program_crc);
 uint8_t Power_GetFaultOrWarnState(void);
 uint8_t Power_IsFaultOrWarn(void);
+/* 根据value_VIN_U更新SRDD引脚电平：<210V输出高，>=210V输出低 */
+void Power_UpdateSRDD(void);
+/* 风机自动控制Tick，每秒调用一次；管理上电高速→温度控制→命令控制状态机 */
+void Power_FanAutoControlTick(void);
+/* 外部0x0403命令到来时调用，进入命令控制模式，2分钟后自动恢复温度控制 */
+void Power_FanEnterCmdMode(void);
 /* 函数声明说明：Power_ProcessSlaveUpload，从PA2/PA3内部串口环形缓冲取出字节，解析28PIN上传的55 AA ... 66 BB采集帧。 */
 void Power_ProcessSlaveUpload(void);
 /* 函数声明说明：Power_SendSlaveControl，48PIN收到外部0x0403控制命令后，通过PA2/PA3向28PIN下发55 AA C1 ... 66 BB控制帧。 */

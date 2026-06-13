@@ -387,6 +387,7 @@ static uint32_t Power_MakeVoltageStatus(void)
     return status;
 }
 
+
 /* Power_SetFan：电源模块业务处理函数 */
 /* Power_GetFaultOrWarnState：获取当前故障/告警状态，供LED控制和协议上报统一使用 */
 uint8_t Power_GetFaultOrWarnState(void)
@@ -440,16 +441,42 @@ void Power_SetFan(uint8_t fan_switch, uint8_t duty_code)
 void DATA_Convert(void)
 {
     compute_Voltage();
-//    Weighted_Moving_Average(Average, Average_filter);
+    Weighted_Moving_Average(Average, Average_filter);
 
     wendu = Temp_transition_int(ADC_TEMP);
     value_TEMP = (uint16_t)(Power_EncodeTemperature(wendu));
-//    value_12V_I = -5.317660675E-08f*ADC_12V_I*ADC_12V_I*ADC_12V_I + 5.852143557E-05f*ADC_12V_I*ADC_12V_I + 0.3978594518f*ADC_12V_I + 2.899096952f;
-//    value_12V_U = 2.022636067E-08f*ADC_12V_U*ADC_12V_U*ADC_12V_U + -6.558812539E-05f*ADC_12V_U*ADC_12V_U + 0.6727864702f*ADC_12V_U + 1.06591119f;
-//    value_28V_I = 1.338135391E-08f*ADC_28V_I*ADC_28V_I*ADC_28V_I + -3.677938085E-05f*ADC_28V_I*ADC_28V_I + 0.6425711879f*ADC_28V_I + -4.303419695f;
-//    value_28V_U = 1.338135391E-08f*ADC_28V_U*ADC_28V_U*ADC_28V_U + -3.677938085E-05f*ADC_28V_U*ADC_28V_U + 0.6425711879f*ADC_28V_U + -4.303419695f;
-//    value_VIN_I = 1.338135391E-08f*ADC_VIN_I*ADC_VIN_I*ADC_VIN_I + -3.677938085E-05f*ADC_VIN_I*ADC_VIN_I + 0.6425711879f*ADC_VIN_I + -4.303419695;
-//    value_VIN_U = 1.338135391E-08f*ADC_VIN_U*ADC_VIN_U*ADC_VIN_U + -3.677938085E-05f*ADC_VIN_U*ADC_VIN_U + 0.6425711879f*ADC_VIN_U + -4.303419695f;
+
+//    value_12V_I = Power_FloatToU16Safe(
+//        -5.317660675E-08f * ADC_12V_I * ADC_12V_I * ADC_12V_I +
+//         5.852143557E-05f * ADC_12V_I * ADC_12V_I +
+//         0.3978594518f * ADC_12V_I + 2.899096952f);
+
+//    value_12V_U = Power_FloatToU16Safe(
+//         2.022636067E-08f * ADC_12V_U * ADC_12V_U * ADC_12V_U +
+//        -6.558812539E-05f * ADC_12V_U * ADC_12V_U +
+//         0.6727864702f * ADC_12V_U + 1.06591119f);
+
+//    value_28V_I = Power_FloatToU16Safe(
+//         1.338135391E-08f * ADC_28V_I * ADC_28V_I * ADC_28V_I +
+//        -3.677938085E-05f * ADC_28V_I * ADC_28V_I +
+//         0.6425711879f * ADC_28V_I - 4.303419695f);
+
+//    /* value_28V_U：若当前校准系数与实际电路不符，请根据实测分压比重新拟合多项式 */
+//    value_28V_U = Power_FloatToU16Safe(
+//         1.338135391E-08f * ADC_28V_U * ADC_28V_U * ADC_28V_U +
+//        -3.677938085E-05f * ADC_28V_U * ADC_28V_U +
+//         0.6425711879f * ADC_28V_U - 4.303419695f);
+
+//    value_VIN_I = Power_FloatToU16Safe(
+//         1.338135391E-08f * ADC_VIN_I * ADC_VIN_I * ADC_VIN_I +
+//        -3.677938085E-05f * ADC_VIN_I * ADC_VIN_I +
+//         0.6425711879f * ADC_VIN_I - 4.303419695f);
+
+//    /* value_VIN_U：若当前校准系数与实际电路不符，请根据实测分压比重新拟合多项式 */
+//    value_VIN_U = Power_FloatToU16Safe(
+//         1.338135391E-08f * ADC_VIN_U * ADC_VIN_U * ADC_VIN_U +
+//        -3.677938085E-05f * ADC_VIN_U * ADC_VIN_U +
+//         0.6425711879f * ADC_VIN_U - 4.303419695f);
 
     Power_UpdateMaxMin(value_VIN_U, &power_vin_u_max, &power_vin_u_min);
     Power_UpdateMaxMin(value_12V_U, &power_12v_u_max, &power_12v_u_min);
@@ -527,7 +554,7 @@ void Power_SendSelfCheck(uint8_t self_check_type)
     buff[18] = Power_GetFaultOrWarnState();
 
     Power_FillU16(buff, 19, value_VIN_U);
-    Power_FillU16(buff, 21, value_VIN_U);       // 中间转换电压，厂家提供值；当前无独立采样，暂用VIN
+    Power_FillU16(buff, 21, value_VIN_U);          // 中间转换电压，厂家提供值；当前无独立采样，暂用VIN
     Power_FillU16(buff, 23, power_vin_u_max);
     Power_FillU16(buff, 25, power_vin_u_min);
     Power_FillU16(buff, 27, value_12V_U);
@@ -684,6 +711,117 @@ void Power_SendUpdateReport(uint8_t report_state, uint8_t *name, uint8_t name_le
     buff[37] = 0x00;
 
     uart_send_protocol_frame(POWER_EXT_UART_INDEX, buff, 38);
+}
+
+/* ==================== 风机自动温度控制状态机 ==================== */
+
+/* 状态定义 */
+typedef enum
+{
+    FAN_CTRL_STARTUP = 0,   /* 上电高速阶段 */
+    FAN_CTRL_TEMP,          /* 温度自动控制阶段 */
+    FAN_CTRL_CMD,           /* 外部命令控制（临时） */
+} FanCtrlState_t;
+
+static FanCtrlState_t fan_ctrl_state  = FAN_CTRL_STARTUP;
+static uint32_t       fan_ctrl_sec    = 0;  /* 当前阶段已计时秒数 */
+
+/*******************************************************************************
+** 函数名称: Power_GetTempBasedDuty
+** 功能描述: 根据当前温度返回对应的风机占空比代码。
+********************************************************************************/
+static uint8_t Power_GetTempBasedDuty(void)
+{
+    if (wendu >= POWER_FAN_TEMP_THRESH_HIGH)
+    {
+        return POWER_FAN_SPEED_HIGH;
+    }
+    if (wendu >= POWER_FAN_TEMP_THRESH_MID)
+    {
+        return POWER_FAN_SPEED_MID;
+    }
+    return POWER_FAN_SPEED_LOW;
+}
+
+/*******************************************************************************
+** 函数名称: Power_FanEnterCmdMode
+** 功能描述: 收到外部0x0403风机控制命令时调用，进入命令控制模式。
+**           2分钟（POWER_FAN_CMD_KEEP_SEC秒）后自动切回温度控制。
+********************************************************************************/
+void Power_FanEnterCmdMode(void)
+{
+    fan_ctrl_state = FAN_CTRL_CMD;
+    fan_ctrl_sec   = 0;
+}
+
+/*******************************************************************************
+** 函数名称: Power_FanAutoControlTick
+** 功能描述: 风机自动控制Tick，每秒调用一次。
+**           上电阶段：高速运行POWER_FAN_STARTUP_SEC秒；
+**           温度控制：按温度自动调节转速；
+**           命令控制：保持外部命令速度，超时后切回温度控制。
+********************************************************************************/
+void Power_FanAutoControlTick(void)
+{
+    uint8_t duty;
+
+    fan_ctrl_sec++;
+
+    switch (fan_ctrl_state)
+    {
+    case FAN_CTRL_STARTUP:
+        if (fan_ctrl_sec == 1U)
+        {
+            /* 上电第一个Tick立即开启风机高速 */
+            Power_SetFan(POWER_FAN_ON, POWER_FAN_SPEED_HIGH);
+            Power_SendSlaveControl(POWER_FAN_ON, POWER_FAN_SPEED_HIGH, 0);
+        }
+        if (fan_ctrl_sec >= POWER_FAN_STARTUP_SEC)
+        {
+            fan_ctrl_state = FAN_CTRL_TEMP;
+            fan_ctrl_sec   = 0;
+        }
+        break;
+
+    case FAN_CTRL_TEMP:
+        duty = Power_GetTempBasedDuty();
+        Power_SetFan(POWER_FAN_ON, duty);
+        Power_SendSlaveControl(POWER_FAN_ON, duty, 0);
+        break;
+
+    case FAN_CTRL_CMD:
+        /* 命令控制期间不改变转速，等待超时 */
+        if (fan_ctrl_sec >= POWER_FAN_CMD_KEEP_SEC)
+        {
+            fan_ctrl_state = FAN_CTRL_TEMP;
+            fan_ctrl_sec   = 0;
+        }
+        break;
+
+    default:
+        fan_ctrl_state = FAN_CTRL_TEMP;
+        fan_ctrl_sec   = 0;
+        break;
+    }
+}
+
+/*******************************************************************************
+** 函数名称: Power_UpdateSRDD
+** 功能描述: 根据输入电压value_VIN_U更新SRDD（PB0）引脚输出电平。
+**           输入电压 < 21000（即210V，单位0.01V）时输出高电平，否则输出低电平。
+**           需在ADC完成换算后周期调用（建议1秒以内）。
+********************************************************************************/
+void Power_UpdateSRDD(void)
+{
+    /* 210V 对应单位 0.01V 的工程值为 21000 */
+    if (value_VIN_U < 21000U)
+    {
+        SRDD_HIGH;
+    }
+    else
+    {
+        SRDD_LOW;
+    }
 }
 
 void test(void)

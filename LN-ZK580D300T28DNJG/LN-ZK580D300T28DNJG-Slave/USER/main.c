@@ -248,7 +248,7 @@ void USART_task(void *pvParameters)
         if (xSemaphoreTake(SendMessgMutex, portMAX_DELAY) == pdTRUE)
         {
             usart_Sen_dma(1, USART1_TX_BUF, POWER_UPLOAD_FRAME_LEN);
-						vTaskDelay(3);         
+						vTaskDelay(15);         
             // ͷŻ
             xSemaphoreGive(SendMessgMutex);
         }
@@ -298,9 +298,7 @@ void start_task(void *pvParameters)
     }; // 
 
 
-    // ˳ٽ
     taskEXIT_CRITICAL();
-    // ɾʼ
     vTaskDelete(StartTask_Handler);
 }
 
@@ -321,7 +319,8 @@ void SYS_init()
     MYDMA_Config();  // 쳣λ
     adc_config();    // ADC
     uart1_init(115200);
-    pwm_config(999, 71);  // F_PWMǰȽֵPA2/PA3ϴ
+    /* 10kHz PWM：72MHz / (7+1) / (899+1) = 10000Hz，占空比比较值范围 0~899 */
+    pwm_config(899, 7);
     timer1_config();
 		timer2_config();	
 

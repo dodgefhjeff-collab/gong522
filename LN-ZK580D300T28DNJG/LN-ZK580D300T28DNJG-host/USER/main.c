@@ -252,6 +252,8 @@ static void Power_HandleControl(uint8_t *frame, uint16_t frame_len)
 
     Power_SetFan(fan_switch, duty);
     Power_SendSlaveControl(fan_switch, duty, clear_flag);
+    /* 外部命令控制风机，进入临时命令模式，2分钟后自动恢复温度控制 */
+    Power_FanEnterCmdMode();
     if (clear_flag == POWER_CLEAR_MAXMIN || clear_flag == POWER_CLEAR_MAXMIN_AND_HOUR)
     {
         Power_ClearMaxMin();
@@ -585,6 +587,7 @@ void ADC_task(void *pvParameters)
     while (1)
     {
         DATA_Convert();
+				compute_Voltage(); // ɼ˲
         vTaskDelay(20);
     }
 }
@@ -604,8 +607,11 @@ void StatusReport_task(void *pvParameters)
 
     while (1)
     {
-        vTaskDelay(POWER_STATUS_REPORT_PERIOD_MS);
+        vTaskDelay(POWER_STATUS_REPORT_PERIOD_MS);  /* 每1秒执行一次 */
         Power_StatusReportTick(POWER_STATUS_REPORT_PERIOD_MS);
+        Power_FanAutoControlTick();     /* 风机温度控制状态机（1秒/次） */
+        Power_UpdateHostControl();      /* Vopen检测：实时控制12V/28V输出 */
+        Power_UpdateSRDD();             /* SRDD：根据输入电压控制PB0电平 */
     }
 }
 
@@ -672,8 +678,9 @@ void LED_task(void *pvParameters)
             LED_G1_ON;
             LED_G2_ON;
         }
+				GZ2_LED2_RUN_TOGG;
+        vTaskDelay(100);
 
-        vTaskDelay(200);
     }
 }
 
@@ -735,21 +742,21 @@ void SYS_Init(void)
     GPIO_init_all();
     delay_init();
     MYDMA_Config();
-     adc_config(); 
+    Adc_Init();
     TIM2_init_all(499, 1199);
-//    Filter_Init();
+    Filter_Init();
     uart_init(115200);    // PA2/PA3，USART1，两个单片机之间通信
     uart2_init(115200);   // PB10/PB11，USART2，对外管理协议通信
     NVIC_init_all();
     delay_ms(50);
 
-    EN_12V_KZ_ON;
-    EN_28V_KZ_ON;
+    /* 根据Vopen状态决定12V/28V是否开启（不含风机28V） */
+    Power_UpdateHostControl();
+    /* 风机28V和G-PWM上电使能，风机转速由Power_FanAutoControlTick()控制 */
     EN_F28V_KZ_ON;
-		G_PWM_ON;
-		VOPEN_ON;
-		GZ_ON;
-	
+    G_PWM_ON;
+    GZ_ON;
+
     Power_EepromInit();
     Power_SetWorkHour(Power_EepromGetWorkHour());
     Power_ClearMaxMin();
