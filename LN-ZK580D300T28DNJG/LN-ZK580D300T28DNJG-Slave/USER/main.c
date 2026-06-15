@@ -188,12 +188,12 @@ void ADC_task(void *pvParameters)
         compute_Voltage();
         DataConversion();
 
-        test_cnt++;
-        if (test_cnt >= 2)   // 20ms * 50 = 1秒打印一次
-        {
-            test_cnt = 0;
-            test();
-        }
+//        test_cnt++;
+//        if (test_cnt >= 2)   // 20ms * 50 = 1秒打印一次
+//        {
+//            test_cnt = 0;
+//            test();
+//        }
 
         GZ2_LED1_TOGGLE;
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -254,14 +254,14 @@ void USART_task(void *pvParameters)
     {
         Power_ProcessHostCommand();
         // ȡ
-//        if (xSemaphoreTake(SendMessgMutex, portMAX_DELAY) == pdTRUE)
-//        {
+        if (xSemaphoreTake(SendMessgMutex, portMAX_DELAY) == pdTRUE)
+        {
 
-//            usart_Sen_dma(1, USART1_TX_BUF, POWER_UPLOAD_FRAME_LEN);
-//						vTaskDelay(15);         
-//            // ͷŻ
-//            xSemaphoreGive(SendMessgMutex);
-//        }
+            usart_Sen_dma(1, USART1_TX_BUF, POWER_UPLOAD_FRAME_LEN);
+						vTaskDelay(15);         
+            // ͷŻ
+            xSemaphoreGive(SendMessgMutex);
+        }
 //        
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }

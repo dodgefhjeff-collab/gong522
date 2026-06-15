@@ -85,9 +85,21 @@ uint8_t error_flag = 0;
 /* 高电平有效PWM：占空比越高，输出高电平时间越长 */
 static uint16_t Power_DutyToPwmCompare(uint8_t duty_code)
 {
+    uint16_t duty_percent;
     uint16_t duty_compare;
 
-    duty_compare = ((uint16_t)(duty_code >> 4) * POWER_PWM_PERIOD) / 10U;
+    duty_percent = (uint16_t)(duty_code >> 4) * 10U;
+
+    /* 低电平有效的目标占空比补偿+5% */
+    duty_percent += POWER_PWM_OFFSET_PERCENT;
+
+    if (duty_percent > 100U)
+    {
+        duty_percent = 100U;
+    }
+
+    duty_compare = (duty_percent * POWER_PWM_PERIOD) / 100U;
+
     if (duty_compare > POWER_PWM_PERIOD)
     {
         duty_compare = POWER_PWM_PERIOD;
