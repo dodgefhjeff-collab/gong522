@@ -116,7 +116,7 @@ extern uint16_t ADC_results[M];
 // ADC_results 数组宏定义（用于ADC DMA采集结果）
 
 #define value_TEMP      ADC_results[0]   // PB1 - 温度采集
-#define value_12V_I     ADC_results[1]   // PA7 - 12V输出电流
+#define value_12V_I     ADC_results[1]   // PB0 - 12V输出电流
 #define value_12V_U     ADC_results[2]   // PA7 - 12V输出电压
 #define value_28V_I     ADC_results[3]   // PA6 - 28V输出电流
 #define value_28V_U     ADC_results[4]   // PA5 - 28V输出电压

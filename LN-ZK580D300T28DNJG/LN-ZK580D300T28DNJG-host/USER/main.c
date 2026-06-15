@@ -587,6 +587,7 @@ void ADC_task(void *pvParameters)
     while (1)
     {
         DATA_Convert();
+				test();
         vTaskDelay(20);
     }
 }

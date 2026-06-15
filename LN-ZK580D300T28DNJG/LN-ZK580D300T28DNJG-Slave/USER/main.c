@@ -177,16 +177,25 @@ int main()
 ********************************************************************************/
 void ADC_task(void *pvParameters)
 {
-    /* 变量说明：xLastWakeTime，xLastWakeTime变量，用于保存当前模块运行过程中的状态或临时数据。 */
     TickType_t xLastWakeTime;
-    /* 变量说明：xFrequency，xFrequency变量，用于保存当前模块运行过程中的状态或临时数据。 */
-    const TickType_t xFrequency = 20; // 20msɼ
-    xLastWakeTime = xTaskGetTickCount();    // ȡǰʱΪ׼
-    
+    const TickType_t xFrequency = 20;
+    static uint16_t test_cnt = 0;
+
+    xLastWakeTime = xTaskGetTickCount();
+
     while (1)
     {
-        compute_Voltage(); // ɼ˲
-        DataConversion();  
+        compute_Voltage();
+        DataConversion();
+
+        test_cnt++;
+        if (test_cnt >= 2)   // 20ms * 50 = 1秒打印一次
+        {
+            test_cnt = 0;
+            test();
+        }
+
+        GZ2_LED1_TOGGLE;
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
@@ -245,14 +254,15 @@ void USART_task(void *pvParameters)
     {
         Power_ProcessHostCommand();
         // ȡ
-        if (xSemaphoreTake(SendMessgMutex, portMAX_DELAY) == pdTRUE)
-        {
-            usart_Sen_dma(1, USART1_TX_BUF, POWER_UPLOAD_FRAME_LEN);
-						vTaskDelay(15);         
-            // ͷŻ
-            xSemaphoreGive(SendMessgMutex);
-        }
-        
+//        if (xSemaphoreTake(SendMessgMutex, portMAX_DELAY) == pdTRUE)
+//        {
+
+//            usart_Sen_dma(1, USART1_TX_BUF, POWER_UPLOAD_FRAME_LEN);
+//						vTaskDelay(15);         
+//            // ͷŻ
+//            xSemaphoreGive(SendMessgMutex);
+//        }
+//        
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }

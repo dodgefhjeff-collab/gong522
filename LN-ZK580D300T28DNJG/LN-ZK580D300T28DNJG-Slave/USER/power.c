@@ -82,6 +82,7 @@ uint8_t error_flag = 0;
 ** 返回说明: 参见函数返回类型。
 ********************************************************************************/
 /* 4线风机反相PWM：占空比越高转速越低，断开PWM线时全速 */
+/* 高电平有效PWM：占空比越高，输出高电平时间越长 */
 static uint16_t Power_DutyToPwmCompare(uint8_t duty_code)
 {
     uint16_t duty_compare;
@@ -91,9 +92,10 @@ static uint16_t Power_DutyToPwmCompare(uint8_t duty_code)
     {
         duty_compare = POWER_PWM_PERIOD;
     }
-    return (uint16_t)(POWER_PWM_PERIOD - duty_compare);
-}
 
+    return duty_compare;
+}
+//F_PWM_SetValue(POWER_PWM_PERIOD);
 void Power_SetFanControl(uint8_t fan_switch, uint8_t duty_code, uint8_t clear_flag)
 {
     power_fan_switch = fan_switch;
@@ -105,7 +107,7 @@ void Power_SetFanControl(uint8_t fan_switch, uint8_t duty_code, uint8_t clear_fl
         power_fan_switch = POWER_FAN_OFF;
         power_fan_duty = 0x00;
         /* 关风机时输出满占空比，对应反相PWM最低转速 */
-        F_PWM_SetValue(POWER_PWM_PERIOD);
+        F_PWM_SetValue(0);
         return;
     }
 

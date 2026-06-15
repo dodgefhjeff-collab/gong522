@@ -47,7 +47,7 @@
 #define USART2_REC_IDLE_LEN   1
 // ڹ궨
 /* 宏定义说明：DEBUG_USARTx，调试串口相关宏。 */
-#define  DEBUG_USARTx                   USART0
+#define  DEBUG_USARTx                   USART1
 /* 宏定义说明：DEBUG_USART_CLK，调试串口相关宏。 */
 #define  DEBUG_USART_CLK                RCC_APB2Periph_USART1
 /* 宏定义说明：DEBUG_USART_APBxClkCmd，调试串口相关宏。 */
